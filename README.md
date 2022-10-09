@@ -1,3 +1,208 @@
+# ArchiveBox Development
+
+All contributions to ArchiveBox are welcomed! Check our [issues](https://github.com/ArchiveBox/ArchiveBox/issues) and [Roadmap](https://github.com/ArchiveBox/ArchiveBox/wiki/Roadmap) for things to work on, and please open an issue to discuss your proposed implementation before working on things! Otherwise we may have to close your PR if it doesn't align with our roadmap.
+
+Low hanging fruit / easy first tickets:<br/>
+<a href="https://lgtm.com/projects/g/ArchiveBox/ArchiveBox/alerts/"><img alt="Total alerts" src="https://img.shields.io/lgtm/alerts/g/ArchiveBox/ArchiveBox.svg?logo=lgtm&logoWidth=18"/></a>
+
+### Setup the dev environment
+
+<details><summary><i>Click to expand...</i></summary>
+
+#### 1. Clone the main code repo (making sure to pull the submodules as well)
+
+```bash
+git clone --recurse-submodules https://github.com/ArchiveBox/ArchiveBox
+cd ArchiveBox
+git checkout dev  # or the branch you want to test
+git submodule update --init --recursive
+git pull --recurse-submodules
+```
+
+#### 2. Option A: Install the Python, JS, and system dependencies directly on your machine
+
+```bash
+# Install ArchiveBox + python dependencies
+python3 -m venv .venv && source .venv/bin/activate && pip install -e '.[dev]'
+# or: pipenv install --dev && pipenv shell
+
+# Install node dependencies
+npm install
+# or
+archivebox setup
+
+# Check to see if anything is missing
+archivebox --version
+# install any missing dependencies manually, or use the helper script:
+./bin/setup.sh
+```
+
+#### 2. Option B: Build the docker container and use that for development instead
+
+```bash
+# Optional: develop via docker by mounting the code dir into the container
+# if you edit e.g. ./archivebox/core/models.py on the docker host, runserver
+# inside the container will reload and pick up your changes
+docker build . -t archivebox
+docker run -it \
+    -v $PWD/data:/data \
+    archivebox init --setup
+docker run -it -p 8000:8000 \
+    -v $PWD/data:/data \
+    -v $PWD/archivebox:/app/archivebox \
+    archivebox server 0.0.0.0:8000 --debug --reload
+
+# (remove the --reload flag and add the --nothreading flag when profiling with the django debug toolbar)
+```
+
+</details>
+
+### Common development tasks
+
+See the `./bin/` folder and read the source of the bash scripts within.
+You can also run all these in Docker. For more examples see the GitHub Actions CI/CD tests that are run: `.github/workflows/*.yaml`.
+
+#### Run in DEBUG mode
+
+<details><summary><i>Click to expand...</i></summary>
+
+```bash
+archivebox config --set DEBUG=True
+# or
+archivebox server --debug ...
+```
+
+https://stackoverflow.com/questions/1074212/how-can-i-see-the-raw-sql-queries-django-is-running
+
+</details>
+
+#### Install and run a specific GitHub branch
+
+<details><summary><i>Click to expand...</i></summary>
+
+```bash
+# docker:
+docker build -t archivebox:dev https://github.com/ArchiveBox/ArchiveBox.git#dev
+docker run -it -v $PWD:/data archivebox:dev init --setup
+
+# bare metal:
+pip install 'git+https://github.com/pirate/ArchiveBox@dev'
+npm install 'git+https://github.com/ArchiveBox/ArchiveBox.git#dev'
+archivebox init --setup
+```
+
+</details>
+
+#### Run the linters
+
+<details><summary><i>Click to expand...</i></summary>
+
+```bash
+./bin/lint.sh
+```
+(uses `flake8` and `mypy`)
+
+</details>
+
+#### Run the integration tests
+
+<details><summary><i>Click to expand...</i></summary>
+
+```bash
+./bin/test.sh
+```
+(uses `pytest -s`)
+
+</details>
+
+#### Make migrations or enter a django shell
+
+<details><summary><i>Click to expand...</i></summary>
+
+Make sure to run this whenever you change things in `models.py`.
+```bash
+cd archivebox/
+./manage.py makemigrations
+
+cd path/to/test/data/
+archivebox shell
+archivebox manage dbshell
+```
+(uses `pytest -s`)  
+https://stackoverflow.com/questions/1074212/how-can-i-see-the-raw-sql-queries-django-is-running
+
+</details>
+
+#### Contributing a new extractor
+
+<details><summary><i>Click to expand...</i></summary><br/><br/>
+
+ArchiveBox [`extractors`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/archivebox/extractors/media.py) are external binaries or Python/Node scripts that ArchiveBox runs to archive content on a page.
+
+Extractors take the URL of a page to archive, write their output to the filesystem `archive/<timestamp>/<extractorname>/...`, and return an [`ArchiveResult`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/archivebox/core/models.py#:~:text=return%20qs-,class%20ArchiveResult,-(models.Model)%3A) entry which is saved to the database (visible on the `Log` page in the UI).
+
+*Check out how we added **[`archivebox/extractors/singlefile.py`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/archivebox/extractors/singlefile.py)** as an example of the process: [Issue #399](https://github.com/ArchiveBox/ArchiveBox/issues/399) + [PR #403](https://github.com/ArchiveBox/ArchiveBox/pull/403).*
+
+<br/>
+
+
+**The process to contribute a new extractor is like this:**
+
+1. [Open an issue](https://github.com/ArchiveBox/ArchiveBox/issues/new?assignees=&labels=changes%3A+behavior%2Cstatus%3A+idea+phase&template=feature_request.md&title=Feature+Request%3A+...) with your propsoed implementation (please link to the pages of any new external dependencies you plan on using)
+2. Ensure any dependencies needed are easily installable via a package managers like `apt`, `brew`, `pip3`, `npm`
+   (Ideally, prefer to use external programs available via `pip3` or `npm`, however we do support using any binary installable via package manager that exposes a CLI/Python API and writes output to stdout or the filesystem.)
+3. Create a new file in [`archivebox/extractors/<extractorname>.py`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/archivebox/extractors) (copy an existing extractor like [`singlefile.py`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/archivebox/extractors/singlefile.py) as a template)
+4. Add config settings to enable/disable any new dependencies and the extractor as a whole, e.g. `USE_DEPENDENCYNAME`, `SAVE_EXTRACTORNAME`, `EXTRACTORNAME_SOMEOTHEROPTION` in [`archivebox/config.py`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/archivebox/config.py)
+5. Add a preview section to [`archivebox/templates/core/snapshot.html`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/archivebox/templates/core/snapshot.html) to view the output, and a column to [`archivebox/templates/core/index_row.html`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/archivebox/templates/core/index_row.html) with an icon for your extractor
+6. Add an integration test for your extractor in [`tests/test_extractors.py`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/tests/test_extractors.py)
+7. [Submit your PR for review!](https://github.com/ArchiveBox/ArchiveBox/blob/dev/.github/CONTRIBUTING.md) 🎉
+8. Once merged, please document it in these places and anywhere else you see info about other extractors:
+  - https://github.com/ArchiveBox/ArchiveBox#output-formats
+  - https://github.com/ArchiveBox/ArchiveBox/wiki/Configuration#archive-method-toggles
+  - https://github.com/ArchiveBox/ArchiveBox/wiki/Install#dependencies
+
+<br/><br/>
+
+</details>
+
+#### Build the docs, pip package, and docker image
+
+<details><summary><i>Click to expand...</i></summary>
+
+(Normally CI takes care of this, but these scripts can be run to do it manually)
+```bash
+./bin/build.sh
+
+# or individually:
+./bin/build_docs.sh
+./bin/build_pip.sh
+./bin/build_deb.sh
+./bin/build_brew.sh
+./bin/build_docker.sh
+```
+
+</details>
+
+#### Roll a release
+
+<details><summary><i>Click to expand...</i></summary>
+
+(Normally CI takes care of this, but these scripts can be run to do it manually)
+```bash
+./bin/release.sh
+
+# or individually:
+./bin/release_docs.sh
+./bin/release_pip.sh
+./bin/release_deb.sh
+./bin/release_brew.sh
+./bin/release_docker.sh
+```
+
+</details>
+
+---
+
 <div align="center">
 <em><img src="https://i.imgur.com/5B48E3N.png" height="90px"></em>
 <h1>ArchiveBox<br/><sub>Open-source self-hosted web archiving.</sub></h1>
@@ -852,214 +1057,9 @@ You can also access the docs locally by looking in the [`ArchiveBox/docs/`](http
 
 <br/>
 
----
-
 <div align="center">
 <img src="https://i.imgur.com/EGWjbD4.png" width="100%" alt="development">
 </div>
-
-# ArchiveBox Development
-
-All contributions to ArchiveBox are welcomed! Check our [issues](https://github.com/ArchiveBox/ArchiveBox/issues) and [Roadmap](https://github.com/ArchiveBox/ArchiveBox/wiki/Roadmap) for things to work on, and please open an issue to discuss your proposed implementation before working on things! Otherwise we may have to close your PR if it doesn't align with our roadmap.
-
-Low hanging fruit / easy first tickets:<br/>
-<a href="https://lgtm.com/projects/g/ArchiveBox/ArchiveBox/alerts/"><img alt="Total alerts" src="https://img.shields.io/lgtm/alerts/g/ArchiveBox/ArchiveBox.svg?logo=lgtm&logoWidth=18"/></a>
-
-### Setup the dev environment
-
-<details><summary><i>Click to expand...</i></summary>
-
-#### 1. Clone the main code repo (making sure to pull the submodules as well)
-
-```bash
-git clone --recurse-submodules https://github.com/ArchiveBox/ArchiveBox
-cd ArchiveBox
-git checkout dev  # or the branch you want to test
-git submodule update --init --recursive
-git pull --recurse-submodules
-```
-
-#### 2. Option A: Install the Python, JS, and system dependencies directly on your machine
-
-```bash
-# Install ArchiveBox + python dependencies
-python3 -m venv .venv && source .venv/bin/activate && pip install -e '.[dev]'
-# or: pipenv install --dev && pipenv shell
-
-# Install node dependencies
-npm install
-# or
-archivebox setup
-
-# Check to see if anything is missing
-archivebox --version
-# install any missing dependencies manually, or use the helper script:
-./bin/setup.sh
-```
-
-#### 2. Option B: Build the docker container and use that for development instead
-
-```bash
-# Optional: develop via docker by mounting the code dir into the container
-# if you edit e.g. ./archivebox/core/models.py on the docker host, runserver
-# inside the container will reload and pick up your changes
-docker build . -t archivebox
-docker run -it \
-    -v $PWD/data:/data \
-    archivebox init --setup
-docker run -it -p 8000:8000 \
-    -v $PWD/data:/data \
-    -v $PWD/archivebox:/app/archivebox \
-    archivebox server 0.0.0.0:8000 --debug --reload
-
-# (remove the --reload flag and add the --nothreading flag when profiling with the django debug toolbar)
-```
-
-</details>
-
-### Common development tasks
-
-See the `./bin/` folder and read the source of the bash scripts within.
-You can also run all these in Docker. For more examples see the GitHub Actions CI/CD tests that are run: `.github/workflows/*.yaml`.
-
-#### Run in DEBUG mode
-
-<details><summary><i>Click to expand...</i></summary>
-
-```bash
-archivebox config --set DEBUG=True
-# or
-archivebox server --debug ...
-```
-
-https://stackoverflow.com/questions/1074212/how-can-i-see-the-raw-sql-queries-django-is-running
-
-</details>
-
-#### Install and run a specific GitHub branch
-
-<details><summary><i>Click to expand...</i></summary>
-
-```bash
-# docker:
-docker build -t archivebox:dev https://github.com/ArchiveBox/ArchiveBox.git#dev
-docker run -it -v $PWD:/data archivebox:dev init --setup
-
-# bare metal:
-pip install 'git+https://github.com/pirate/ArchiveBox@dev'
-npm install 'git+https://github.com/ArchiveBox/ArchiveBox.git#dev'
-archivebox init --setup
-```
-
-</details>
-
-#### Run the linters
-
-<details><summary><i>Click to expand...</i></summary>
-
-```bash
-./bin/lint.sh
-```
-(uses `flake8` and `mypy`)
-
-</details>
-
-#### Run the integration tests
-
-<details><summary><i>Click to expand...</i></summary>
-
-```bash
-./bin/test.sh
-```
-(uses `pytest -s`)
-
-</details>
-
-#### Make migrations or enter a django shell
-
-<details><summary><i>Click to expand...</i></summary>
-
-Make sure to run this whenever you change things in `models.py`.
-```bash
-cd archivebox/
-./manage.py makemigrations
-
-cd path/to/test/data/
-archivebox shell
-archivebox manage dbshell
-```
-(uses `pytest -s`)  
-https://stackoverflow.com/questions/1074212/how-can-i-see-the-raw-sql-queries-django-is-running
-
-</details>
-
-#### Contributing a new extractor
-
-<details><summary><i>Click to expand...</i></summary><br/><br/>
-
-ArchiveBox [`extractors`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/archivebox/extractors/media.py) are external binaries or Python/Node scripts that ArchiveBox runs to archive content on a page.
-
-Extractors take the URL of a page to archive, write their output to the filesystem `archive/<timestamp>/<extractorname>/...`, and return an [`ArchiveResult`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/archivebox/core/models.py#:~:text=return%20qs-,class%20ArchiveResult,-(models.Model)%3A) entry which is saved to the database (visible on the `Log` page in the UI).
-
-*Check out how we added **[`archivebox/extractors/singlefile.py`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/archivebox/extractors/singlefile.py)** as an example of the process: [Issue #399](https://github.com/ArchiveBox/ArchiveBox/issues/399) + [PR #403](https://github.com/ArchiveBox/ArchiveBox/pull/403).*
-
-<br/>
-
-
-**The process to contribute a new extractor is like this:**
-
-1. [Open an issue](https://github.com/ArchiveBox/ArchiveBox/issues/new?assignees=&labels=changes%3A+behavior%2Cstatus%3A+idea+phase&template=feature_request.md&title=Feature+Request%3A+...) with your propsoed implementation (please link to the pages of any new external dependencies you plan on using)
-2. Ensure any dependencies needed are easily installable via a package managers like `apt`, `brew`, `pip3`, `npm`
-   (Ideally, prefer to use external programs available via `pip3` or `npm`, however we do support using any binary installable via package manager that exposes a CLI/Python API and writes output to stdout or the filesystem.)
-3. Create a new file in [`archivebox/extractors/<extractorname>.py`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/archivebox/extractors) (copy an existing extractor like [`singlefile.py`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/archivebox/extractors/singlefile.py) as a template)
-4. Add config settings to enable/disable any new dependencies and the extractor as a whole, e.g. `USE_DEPENDENCYNAME`, `SAVE_EXTRACTORNAME`, `EXTRACTORNAME_SOMEOTHEROPTION` in [`archivebox/config.py`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/archivebox/config.py)
-5. Add a preview section to [`archivebox/templates/core/snapshot.html`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/archivebox/templates/core/snapshot.html) to view the output, and a column to [`archivebox/templates/core/index_row.html`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/archivebox/templates/core/index_row.html) with an icon for your extractor
-6. Add an integration test for your extractor in [`tests/test_extractors.py`](https://github.com/ArchiveBox/ArchiveBox/blob/dev/tests/test_extractors.py)
-7. [Submit your PR for review!](https://github.com/ArchiveBox/ArchiveBox/blob/dev/.github/CONTRIBUTING.md) 🎉
-8. Once merged, please document it in these places and anywhere else you see info about other extractors:
-  - https://github.com/ArchiveBox/ArchiveBox#output-formats
-  - https://github.com/ArchiveBox/ArchiveBox/wiki/Configuration#archive-method-toggles
-  - https://github.com/ArchiveBox/ArchiveBox/wiki/Install#dependencies
-
-<br/><br/>
-
-</details>
-
-#### Build the docs, pip package, and docker image
-
-<details><summary><i>Click to expand...</i></summary>
-
-(Normally CI takes care of this, but these scripts can be run to do it manually)
-```bash
-./bin/build.sh
-
-# or individually:
-./bin/build_docs.sh
-./bin/build_pip.sh
-./bin/build_deb.sh
-./bin/build_brew.sh
-./bin/build_docker.sh
-```
-
-</details>
-
-#### Roll a release
-
-<details><summary><i>Click to expand...</i></summary>
-
-(Normally CI takes care of this, but these scripts can be run to do it manually)
-```bash
-./bin/release.sh
-
-# or individually:
-./bin/release_docs.sh
-./bin/release_pip.sh
-./bin/release_deb.sh
-./bin/release_brew.sh
-./bin/release_docker.sh
-```
-
-</details>
 
 ---
 
