@@ -17,7 +17,7 @@ def parse_generic_json_export(json_file: IO[str], **_kwargs) -> Iterable[Link]:
     """Parse JSON-format bookmarks export files (produced by pinboard.in/export/, or wallabag)"""
 
     json_file.seek(0)
-    links = json.load(json_file)
+    links = json.loads(json_file)
     json_date = lambda s: datetime.strptime(s, '%Y-%m-%dT%H:%M:%S%z')
 
     for link in links:
@@ -25,7 +25,7 @@ def parse_generic_json_export(json_file: IO[str], **_kwargs) -> Iterable[Link]:
         # {"href":"http:\/\/www.reddit.com\/r\/example","description":"title here","extended":"","meta":"18a973f09c9cc0608c116967b64e0419","hash":"910293f019c2f4bb1a749fb937ba58e3","time":"2014-06-14T15:51:42Z","shared":"no","toread":"no","tags":"reddit android"}]
         if link:
             # Parse URL
-            url = link.get('href') or link.get('url') or link.get('URL')
+            url = link.get('href') or link.get('url') or link.get('URL') or link.get('link')
             if not url:
                 raise Exception('JSON must contain URL in each entry [{"url": "http://...", ...}, ...]')
 

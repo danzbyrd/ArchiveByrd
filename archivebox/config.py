@@ -80,7 +80,7 @@ CONFIG_SCHEMA: Dict[str, ConfigDefaultDict] = {
         'ONLY_NEW':                 {'type': bool,  'default': True},
         'TIMEOUT':                  {'type': int,   'default': 60},
         'MEDIA_TIMEOUT':            {'type': int,   'default': 3600},
-        'OUTPUT_PERMISSIONS':       {'type': str,   'default': '644'},
+        'OUTPUT_PERMISSIONS':       {'type': str,   'default': '755'},
         'RESTRICT_FILE_NAMES':      {'type': str,   'default': 'windows'},
         'URL_BLACKLIST':            {'type': str,   'default': r'\.(css|js|otf|ttf|woff|woff2|gstatic\.com|googleapis\.com/css)(\?.*)?$'},  # to avoid downloading code assets as their own pages
         'URL_WHITELIST':            {'type': str,   'default': None},
@@ -118,7 +118,7 @@ CONFIG_SCHEMA: Dict[str, ConfigDefaultDict] = {
         'SAVE_WARC':                {'type': bool,  'default': True, 'aliases': ('FETCH_WARC',)},
         'SAVE_GIT':                 {'type': bool,  'default': True, 'aliases': ('FETCH_GIT',)},
         'SAVE_MEDIA':               {'type': bool,  'default': True, 'aliases': ('FETCH_MEDIA',)},
-        'SAVE_ARCHIVE_DOT_ORG':     {'type': bool,  'default': True, 'aliases': ('SUBMIT_ARCHIVE_DOT_ORG',)},
+        'SAVE_ARCHIVE_DOT_ORG':     {'type': bool,  'default': False, 'aliases': ('SUBMIT_ARCHIVE_DOT_ORG',)},
     },
 
     'ARCHIVE_METHOD_OPTIONS': {

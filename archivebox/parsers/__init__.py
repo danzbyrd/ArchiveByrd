@@ -46,6 +46,7 @@ from . import generic_json
 from . import generic_html
 from . import generic_txt
 from . import url_list
+from . import twint_json
 
 
 PARSERS = {
@@ -68,6 +69,7 @@ PARSERS = {
 
     # Explicitly specified parsers
     url_list.KEY:       (url_list.NAME,         url_list.PARSER),
+    twint_json.KEY:     (twint_json.NAME,       twint_json.PARSER),
 }
 
 
@@ -152,7 +154,7 @@ def save_text_as_source(raw_text: str, filename: str='{ts}-stdin.txt', out_dir: 
 
     referenced_texts = ''
 
-    for entry in raw_text.split():
+    for entry in raw_text.split("/n"):
         try:
             if Path(entry).exists:
                 referenced_texts += Path(entry).read_text()

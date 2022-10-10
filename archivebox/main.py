@@ -598,7 +598,6 @@ def add(urls: Union[str, List[str]],
     check_dependencies()
     new_links: List[Link] = []
     all_links = load_main_index(out_dir=out_dir)
-
     log_importing_started(urls=urls, depth=depth, index_only=index_only)
     if isinstance(urls, str):
         # save verbatim stdin to sources
