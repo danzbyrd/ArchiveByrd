@@ -47,18 +47,18 @@ def parse_twint_json_export(json_file: IO[str], **_kwargs) -> Iterable[Link]:
             
             # Parse the title
             title = None
-            if link.get('title'):
-                title = link['title'].strip()
-            elif link.get('description'):
-                title = link['description'].replace(' — Readability', '').strip()
-            elif link.get('name'):
-                title = link['name'].strip()
+            if data.get('title'):
+                title = data['title'].strip()
+            elif data.get('description'):
+                title = data['description'].replace(' — Readability', '').strip()
+            elif data.get('name'):
+                title = data['name'].strip()
 
             yield Link(
                 url=htmldecode(url),
                 timestamp=ts_str,
                 title=htmldecode(title) or None,
-                tags=htmldecode(link.get('tags')) or '',
+                tags=htmldecode(data.get('tags')) or '',
                 sources=[json_file.name],
             )
 
