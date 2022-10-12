@@ -21,8 +21,6 @@ def parse_twint_json_export(json_file: IO[str], **_kwargs) -> Iterable[Link]:
     reader = jsonlines.Reader(json_file)
 
     for data in reader.iter(type=dict, skip_invalid=True):
-        print(data)
-        # data = json.loads(line)
         # example line
         # {"href":"http:\/\/www.reddit.com\/r\/example","description":"title here","extended":"","meta":"18a973f09c9cc0608c116967b64e0419","hash":"910293f019c2f4bb1a749fb937ba58e3","time":"2014-06-14T15:51:42Z","shared":"no","toread":"no","tags":"reddit android"}]
         if data:
