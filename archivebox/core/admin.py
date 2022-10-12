@@ -79,7 +79,7 @@ class SnapshotActionForm(ActionForm):
 
 
 class SnapshotAdmin(SearchResultsAdminMixin, admin.ModelAdmin):
-    list_display = ('added', 'title_str', 'files', 'size', 'url_str')
+    list_display = ('bookmarked', 'title_str', 'files', 'size', 'url_str', 'added')
     sort_fields = ('title_str', 'url_str', 'added', 'files')
     readonly_fields = ('info', 'bookmarked', 'added', 'updated')
     search_fields = ('id', 'url', 'timestamp', 'title', 'tags__name')
