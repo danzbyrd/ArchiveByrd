@@ -1,6 +1,7 @@
 __package__ = 'archivebox.parsers'
 
 import json
+import jsonlines
 
 from typing import IO, Iterable
 from datetime import datetime, timezone
@@ -14,12 +15,14 @@ from ..util import (
 @enforce_types
 def parse_twint_json_export(json_file: IO[str], **_kwargs) -> Iterable[Link]:
     """Parse Twint export using JSON  output"""
-    date_format = "%Y-%m-%d %H:%M:%S%z"
-    json_file.seek(0)
-    json_date = lambda s: datetime.strptime(s, date_format)
 
-    for line in json_file:
-        data = json.loads(line)
+    json_file.seek(0)
+    json_date = lambda s: datetime.strptime(s, '%Y-%m-%d %H:%M:%S %Z')
+    reader = jsonlines.Reader(json_file)
+
+    for data in reader.iter(type=dict, skip_invalid=True):
+        print(data)
+        # data = json.loads(line)
         # example line
         # {"href":"http:\/\/www.reddit.com\/r\/example","description":"title here","extended":"","meta":"18a973f09c9cc0608c116967b64e0419","hash":"910293f019c2f4bb1a749fb937ba58e3","time":"2014-06-14T15:51:42Z","shared":"no","toread":"no","tags":"reddit android"}]
         if data:
@@ -31,7 +34,7 @@ def parse_twint_json_export(json_file: IO[str], **_kwargs) -> Iterable[Link]:
             ts_str = str(datetime.now(timezone.utc).timestamp())
             if data.get('timestamp'):
                 # chrome/ff histories use a very precise timestamp
-                ts_str = str(data['timestamp'] / 10000000)  
+                ts_str = str(data['timestamp'])  
             elif data.get('time'):
                 ts_str = str(json_date(data['time'].split(',', 1)[0]).timestamp())
             elif data.get('created_at'):
