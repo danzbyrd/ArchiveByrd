@@ -211,7 +211,7 @@ class PublicIndexView(ListView):
     template_name = 'public_index.html'
     model = Snapshot
     paginate_by = SNAPSHOTS_PER_PAGE
-    ordering = ['-added']
+    ordering = ['-timestamp']
 
     def get_context_data(self, **kwargs):
         return {

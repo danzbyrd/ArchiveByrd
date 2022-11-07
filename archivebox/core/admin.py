@@ -80,12 +80,12 @@ class SnapshotActionForm(ActionForm):
 
 class SnapshotAdmin(SearchResultsAdminMixin, admin.ModelAdmin):
     list_display = ('bookmarked', 'title_str', 'files', 'size', 'url_str', 'added')
-    sort_fields = ('title_str', 'url_str', 'added', 'files')
-    readonly_fields = ('info', 'bookmarked', 'added', 'updated')
+    sort_fields = ('timestamp', 'title_str', 'url_str', 'added', 'files')
+    readonly_fields = ('info', 'added', 'updated')
     search_fields = ('id', 'url', 'timestamp', 'title', 'tags__name')
     fields = ('timestamp', 'url', 'title', 'tags', *readonly_fields)
     list_filter = ('added', 'updated', 'tags', 'archiveresult__status')
-    ordering = ['-added']
+    ordering = ['-timestamp']
     actions = ['add_tags', 'remove_tags', 'update_titles', 'update_snapshots', 'resnapshot_snapshot', 'overwrite_snapshots', 'delete_snapshots']
     autocomplete_fields = ['tags']
     inlines = [ArchiveResultInline]
